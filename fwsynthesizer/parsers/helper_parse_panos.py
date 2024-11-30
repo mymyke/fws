@@ -87,6 +87,8 @@ class XMLParser:
             'DNSSecurityProfile': self._parse_entries(self._dns_security_profiles_entries),
             'HipObject': self._parse_entries(self._hip_objects_entries),
             'HipProfile': self._parse_entries(self._hip_profiles_entries),
+            'Interfaces': self._parse_entries(self._interfaces),
+            'Routes' :self._parse_entries(self._routes),
         }
 
     def parse_specific_types(self, object_types):
@@ -122,6 +124,8 @@ class XMLParser:
             'DNSSecurityProfile': self._dns_security_profiles_entries,
             'HipObject': self._hip_objects_entries,
             'HipProfile': self._hip_profiles_entries,
+            'Interfaces': self._parse_entries(self._interfaces),
+            'Routes' :self._parse_entries(self._routes),
         }
 
         for obj_type in object_types:
@@ -1657,12 +1661,60 @@ class XMLParser:
 
         return schedules
 
+    def _interfaces(self):
+
+        interface_entries = []
+
+        for interface in self.root.findall("./devices/entry/network/interface/ethernet/entry"):
+            interface_name = interface.get("name")
+            interface_comment = interface.find("comment").text
+
+            ips = {}
+
+            #currently only layer3 Interfaces supported
+            for layer in ['layer3']:
+                layer_element = interface.find('.//'+str(layer))
+                if layer_element is not None:
+                    ip_list = [ip.get("name") for ip in layer_element.findall('.//ip/entry')]
+                    ips[layer] = {'ips': ip_list}
+            
+            entry_data = {
+                '@name': interface_name,
+                'comment': interface_comment,
+                'ips': ips
+            }
+        
+            interface_entries.append({'entry': entry_data})
+
+        return interface_entries
+
+    def _routes(self):
+
+        route_entries = []
+
+        for route in self.root.findall("./devices/entry/network/virtual-router/entry/routing-table/ip/static-route/entry"):
+            route_name = route.get("name")
+
+            routes = {"name": route_name}
+            #currently only static routes with unicast supported
+            if route.find(".//unicast") is not None: 
+                #currently only nexthop ip supported
+                if route.find(".//nexthop/ip-address"):
+                    routes["nexthop"] = route.find(".//nexthop/ip-address").text
+                routes["metric"] = route.find(".//metric").text
+                routes["destination"] = route.find(".//destination").text
+        
+                route_entries.append({'entry': routes})
+
+        return route_entries
+
+
     def _zones(self):
         root = ET.fromstring(self.file_content)
 
         zone_entries = []
 
-        for zone_entry in root.findall('../devices/entry/vsys/entry/zone/entry'):
+        for zone_entry in root.findall('./devices/entry/vsys/entry/zone/entry'):
             zone_name = zone_entry.get('name')
             zone_protection_profile = zone_entry.find('.//zone-protection-profile')
 
