@@ -5,14 +5,13 @@ import logging
 import re
 
 class XMLParser:
-    def __init__(self, file_path, config_type, device_group_name=None):
-        self.file_path = file_path
+    def __init__(self, file_content,config_type, device_group_name=None):
         self.config_type = config_type
+        self.file_content = file_content
         self.device_group_name = device_group_name
-        self.tree = ET.parse(self.file_path)
-        self.root = self.tree.getroot()
+        self.root = ET.fromstring(self.file_content)
         self.logger = logging.getLogger(__name__)
-        self.logger.debug(f"Initialized XMLParser with file_path: {self.file_path}, config_type: {self.config_type}, device_group_name: {self.device_group_name}")
+        self.logger.debug("Initialized XMLParser")
 
     def _get_base_xpath(self, path_dict):
         if self.config_type == 'panorama/shared':
@@ -22,50 +21,20 @@ class XMLParser:
                 try:
                     return path_dict.get('device-group', '').format(device_group_name=self.device_group_name)
                 except KeyError:
-                    self.logger.error(f"Device group name not found in path_dict: {path_dict}")
+                    self.logger.error("Device group name not found in path_dict: "+str(path_dict))
                     raise
             else:
                 self.logger.error("Device group name is required for panorama/device-group but is None.")
                 raise ValueError("Device group name is required for panorama/device-group but is None.")
         return path_dict.get('local')
 
-    def _sanitize_name(self, name: str) -> str:
+    def _sanitize_name(self, name) :
         """
         Sanitize the name to match the API requirements.
         """
         sanitized_name = re.sub(r'[^a-zA-Z0-9._-]', '-', name)
         return sanitized_name[:63]
 
-    def parse_config_and_set_scope(self, xml_file_path):
-        tree = ET.parse(xml_file_path)
-        root = tree.getroot()
-
-        device_group_xpath = root.find('.//devices/entry/device-group')
-        device_group_name = None
-        scope_type = None
-        scope_value = None
-
-        if device_group_xpath is not None:
-            config_choice = input("Is this a Panorama 'shared' configuration or 'device-group' configuration? Enter 'shared' or 'device-group': ").strip().lower()
-            if config_choice == 'device-group':
-                device_group_name = input("Enter the device-group name: ").strip()
-                scope_type = input("Do you want to use a folder or a snippet? Enter 'folder' or 'snippet': ").strip().lower()
-                scope_value = input(f'Enter the {scope_type} name (Use "All" for "Global"): ').strip()
-                config_type = 'panorama/device-group'
-            else:
-                scope_type = input("Do you want to use a folder or a snippet? Enter 'folder' or 'snippet': ").strip().lower()
-                scope_value = input(f'Enter the {scope_type} name (Use "All" for "Global"): ').strip()
-                config_type = 'panorama/shared'
-        else:
-            scope_type = input("Do you want to use a folder or a snippet? Enter 'folder' or 'snippet': ").strip().lower()
-            scope_value = input(f'Enter the {scope_type} name (Use "All" for "Global"): ').strip()
-            config_type = 'local'
-
-        scope_param = f"&{scope_type}={scope_value}"
-
-        self.logger.debug(f"Parsed config and set scope: {scope_type}={scope_value}, config_type={config_type}, device_group_name={device_group_name}")
-
-        return scope_param, config_type, device_group_name
 
     def etree_to_dict(self, element):
         if element is None:
@@ -159,7 +128,7 @@ class XMLParser:
             if obj_type in method_map:
                 parsed_data[obj_type] = method_map[obj_type]()
             else:
-                self.logger.warning(f"Unknown object type requested: {obj_type}")
+                self.logger.warning("Unknown object type requested: "+str(obj_type))
 
         return parsed_data
 
@@ -375,12 +344,12 @@ class XMLParser:
 
             # Validate name length
             if len(hip_profile['name']) > 31:
-                self.logger.warning(f"HIP profile name '{hip_profile['name']}' exceeds 31 characters. It will be truncated.")
+                self.logger.warning("HIP profile name '"+str(hip_profile['name'])+"' exceeds 31 characters. It will be truncated.")
                 hip_profile['name'] = hip_profile['name'][:31]
 
             # Validate name characters
             if not re.match(r'^[0-9a-zA-Z._-]+$', hip_profile['name']):
-                self.logger.warning(f"HIP profile name '{hip_profile['name']}' contains invalid characters. It should only contain alphanumeric characters, dots, underscores, and hyphens.")
+                self.logger.warning("HIP profile name '"+str(hip_profile['name'])+"' contains invalid characters. It should only contain alphanumeric characters, dots, underscores, and hyphens.")
 
             hip_profiles.append(hip_profile)
 
@@ -554,7 +523,7 @@ class XMLParser:
                         if ipv4_value in ['127.0.0.1', 'pan-sinkhole-default-ip']:
                             sinkhole['ipv4_address'] = ipv4_value
                         else:
-                            self.logger.warning(f"Invalid ipv4_address '{ipv4_value}' for profile '{profile_name}'. Using default 'pan-sinkhole-default-ip'.")
+                            self.logger.warning("Invalid ipv4_address '"+str(ipv4_value)+"' for profile '"+str(profile_name)+"'. Using default 'pan-sinkhole-default-ip'.")
                     
                     if ipv6_element is not None:
                         ipv6_value = ipv6_element.text
@@ -562,7 +531,7 @@ class XMLParser:
                         if ipv6_value == '::1':
                             sinkhole['ipv6_address'] = ipv6_value
                         else:
-                            self.logger.warning(f"Invalid ipv6_address '{ipv6_value}' for profile '{profile_name}'. Using default '::1'.")
+                            self.logger.warning("Invalid ipv6_address '"+str(ipv6_value)+" for profile '"+str(profile_name)+"'. Using default '::1'.")
 
                 # Handle whitelist
                 whitelist = []
@@ -1098,7 +1067,7 @@ class XMLParser:
             filter_entry = {"name": entry.get("name")}
 
             for category in ["category", "subcategory", "technology", "risk", "saas-certifications", "saas-risk"]:
-                members = entry.find(f"./{category}")
+                members = entry.find("./"+str(category))
                 if members is not None:
                     filter_entry[category.replace('-', '_')] = [member.text for member in members.findall("./member")]
 
@@ -1185,7 +1154,7 @@ class XMLParser:
             filtered_app_override_rule = {k: v for k, v in app_override_rule.items() if v is not None}
             app_override_rules.append(filtered_app_override_rule)
 
-        logging.debug(f'FOUND THESE APP PRE RULES: {app_override_rules}')
+        logging.debug('FOUND THESE APP PRE RULES: '+str(app_override_rules))
         return app_override_rules
 
     def _app_override_post_rules_entries(self):
@@ -1231,7 +1200,7 @@ class XMLParser:
             filtered_app_override_rule = {k: v for k, v in app_override_rule.items() if v is not None}
             app_override_rules.append(filtered_app_override_rule)
 
-        logging.debug(f'FOUND THESE APP POST RULES: {app_override_rules}')
+        logging.debug('FOUND THESE APP POST RULES: '+str(app_override_rules))
         return app_override_rules
 
     def _security_pre_rules_entries(self):
@@ -1285,12 +1254,12 @@ class XMLParser:
                 'schedule': schedule.text if schedule is not None else None
             }
             if schedule is not None and schedule.text:
-                logging.warning(f"Schedule detected, manually add {schedule.text} to rule '{name}'")
+                logging.warning("Schedule detected, manually add "+str(schedule.text)+" to rule '"+str(name)+"'")
 
             filtered_security_rules = {k: v for k, v in security_rule.items() if v is not None}
             security_rules.append(filtered_security_rules)
 
-        logging.debug(f'FOUND THESE SECURITY PRE RULES: {security_rules}')
+        logging.debug('FOUND THESE SECURITY PRE RULES: '+str(security_rules))
         return security_rules
 
     def _security_post_rules_entries(self):
@@ -1346,12 +1315,12 @@ class XMLParser:
                 'schedule': schedule.text if schedule is not None else None
             }
             if schedule is not None and schedule.text:
-                logging.warning(f"Schedule detected, manually add {schedule.text} to rule '{name}'")
+                logging.warning("Schedule detected, manually add "+str(schedule.text)+" to rule '"+str(name)+"'")
 
             filtered_security_rules = {k: v for k, v in security_rule.items() if v is not None}
             security_rules.append(filtered_security_rules)
 
-        logging.debug(f'FOUND THESE SECURITY POST RULES: {security_rules}')
+        logging.debug('FOUND THESE SECURITY POST RULES: '+str(security_rules))
         return security_rules
 
     def _decryption_pre_rules_entries(self):
@@ -1418,7 +1387,7 @@ class XMLParser:
             filtered_decryption_rules = {k: v for k, v in decryption_rule.items() if v is not None}
             decryption_rules.append(filtered_decryption_rules)
 
-        logging.debug(f'FOUND THESE DECRYPT PRE RULES: {decryption_rules}')
+        logging.debug('FOUND THESE DECRYPT PRE RULES: '+str(decryption_rules))
         return decryption_rules
 
     def _decryption_post_rules_entries(self):
@@ -1487,7 +1456,7 @@ class XMLParser:
             filtered_decryption_rules = {k: v for k, v in decryption_rule.items() if v is not None}
             decryption_rules.append(filtered_decryption_rules)
 
-        logging.debug(f'FOUND THESE DECRYPT POST RULES: {decryption_rules}')
+        logging.debug('FOUND THESE DECRYPT POST RULES: '+str(decryption_rules))
         return decryption_rules
 
     def _nat_pre_rules_entries(self):
@@ -1689,8 +1658,7 @@ class XMLParser:
         return schedules
 
     def _zones(self):
-        tree = ET.parse(self.file_path)
-        root = tree.getroot()
+        root = ET.fromstring(self.file_content)
 
         zone_entries = []
 
@@ -1701,7 +1669,7 @@ class XMLParser:
             network_data = {}
 
             for layer in ['layer3', 'layer2', 'v-wire']:
-                layer_element = zone_entry.find(f'.//{layer}')
+                layer_element = zone_entry.find('.//'+str(layer))
                 if layer_element is not None:
                     interfaces = [member.text for member in layer_element.findall('member')]
                     network_data[layer] = {'member': interfaces}
@@ -2002,4 +1970,4 @@ class XMLParser:
         elif value.lower() == 'no':
             return False
         else:
-            raise ValueError(f"Cannot convert {value} to boolean")
+            raise ValueError("Cannot convert "+str(value)+" to boolean")
