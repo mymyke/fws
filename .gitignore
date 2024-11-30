@@ -13,3 +13,11 @@ lib/HaPy-python/build/*
 *.pyc
 .directory
 venv
+needed_old_packages/*
+dist-newstyle/*
+lib/**dist-newstyle/*
+z3/**
+*.zip
+*.deb
+
+.vscode/*

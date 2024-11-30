@@ -1,0 +1,3 @@
+packages: .
+          lib/z3
+          lib/HaPy
