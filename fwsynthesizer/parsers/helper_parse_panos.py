@@ -1684,7 +1684,7 @@ class XMLParser:
                 'ips': ips
             }
         
-            interface_entries.append({'entry': entry_data})
+            interface_entries.append(entry_data)
 
         return interface_entries
 
@@ -1699,12 +1699,12 @@ class XMLParser:
             #currently only static routes with unicast supported
             if route.find(".//unicast") is not None: 
                 #currently only nexthop ip supported
-                if route.find(".//nexthop/ip-address"):
+                if route.find(".//nexthop/ip-address") is not None:
                     routes["nexthop"] = route.find(".//nexthop/ip-address").text
                 routes["metric"] = route.find(".//metric").text
                 routes["destination"] = route.find(".//destination").text
         
-                route_entries.append({'entry': routes})
+                route_entries.append(routes)
 
         return route_entries
 

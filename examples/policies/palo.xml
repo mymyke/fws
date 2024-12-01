@@ -515,7 +515,7 @@
                     <member>any</member>
                   </source>
                   <destination>
-                    <member>ext</member>
+                    <member>ext_ip</member>
                   </destination>
                   <source-user>
                     <member>any</member>
@@ -548,7 +548,7 @@
                     <member>any</member>
                   </source>
                   <destination>
-                    <member>ext</member>
+                    <member>ext_ip</member>
                   </destination>
                   <source-user>
                     <member>any</member>
@@ -651,8 +651,8 @@
                   <source-translation>
                     <dynamic-ip-and-port>
                       <interface-address>
-                        <ip>lan0_if</ip>
-                        <interface>ethernet1/1</interface>
+                        <ip>ext_if</ip>
+                        <interface>ethernet1/3</interface>
                       </interface-address>
                     </dynamic-ip-and-port>
                   </source-translation>
