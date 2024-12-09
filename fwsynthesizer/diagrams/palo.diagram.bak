@@ -1,0 +1,9 @@
+CONTROL DIAGRAM:
+
+nodes   = [initial, final, InF, OutN, InN]
+edges   = [ (initial, true, InF),
+            (InF, true, OutN),
+            (OutN, true, InN),
+            (InN, true, final)]
+initial = initial
+final   = final
