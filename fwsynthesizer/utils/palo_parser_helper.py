@@ -1478,7 +1478,15 @@ class XMLParser:
             source = entry.findall('source/member')
             destination = entry.findall('destination/member')
             service = entry.find('service')
-            nat_type = entry.find('nat-type')
+            if entry.find('source-translation') is not None:
+                nat_type = 'source'
+            elif entry.find('destination-translation') is not None:
+                nat_type = 'destination'
+            elif entry.find('nat-type') is not None:
+                nat_type = entry.find('nat-type').text
+            else:
+                nat_type = None
+                # logging.debug('NAT TYPE NOT FOUND')
             description = entry.find('description')
             disabled = entry.find('disabled')
             tag = entry.findall('tag/member')
@@ -1504,12 +1512,17 @@ class XMLParser:
             if source_translation is not None:
                 dynamic_ip_and_port = source_translation.find('dynamic-ip-and-port')
                 if dynamic_ip_and_port is not None:
-                    translated_addresses = dynamic_ip_and_port.findall('translated-address/member')
                     source_translation_dict = {
                         'dynamic_ip_and_port': {
-                            'translated_address': [addr.text for addr in translated_addresses] if translated_addresses else None
                         }
                     }
+                    translated_addresses = dynamic_ip_and_port.findall('translated-address/member')
+                    interface_address = dynamic_ip_and_port.find('interface-address')
+                    if translated_addresses is not None and len(translated_addresses)>0:
+                        source_translation_dict['dynamic_ip_and_port']['translated_address'] = [addr.text for addr in translated_addresses] if translated_addresses else None
+                    if interface_address is not None:
+                        source_translation_dict['dynamic_ip_and_port']['interface_address'] = {"ip":interface_address.find("ip"),'interface':interface_address.find("interface")}
+
 
             nat_rule = {
                 'name': name,
@@ -1518,7 +1531,7 @@ class XMLParser:
                 'source': [member.text for member in source] if source else [],
                 'destination': [member.text for member in destination] if destination else [],
                 'service': service_value,
-                'nat_type': nat_type.text if nat_type is not None else None,
+                'nat_type': nat_type,
                 'description': description.text if description is not None else None,
                 'disabled': disabled.text == 'yes' if disabled is not None else False,
                 'tag': [member.text for member in tag] if tag else [],
@@ -1548,7 +1561,15 @@ class XMLParser:
             source = entry.findall('source/member')
             destination = entry.findall('destination/member')
             service = entry.find('service')
-            nat_type = entry.find('nat-type')
+            if entry.find('source-translation') is not None:
+                nat_type = 'source'
+            elif entry.find('destination-translation') is not None:
+                nat_type = 'destination'
+            elif entry.find('nat-type') is not None:
+                nat_type = entry.find('nat-type').text
+            else:
+                nat_type = None
+                # logging.debug('NAT TYPE NOT FOUND')
             description = entry.find('description')
             disabled = entry.find('disabled')
             tag = entry.findall('tag/member')
@@ -1574,12 +1595,17 @@ class XMLParser:
             if source_translation is not None:
                 dynamic_ip_and_port = source_translation.find('dynamic-ip-and-port')
                 if dynamic_ip_and_port is not None:
-                    translated_addresses = dynamic_ip_and_port.findall('translated-address/member')
+                    
                     source_translation_dict = {
                         'dynamic_ip_and_port': {
-                            'translated_address': [addr.text for addr in translated_addresses] if translated_addresses else None
                         }
                     }
+                    translated_addresses = dynamic_ip_and_port.findall('translated-address/member')
+                    interface_address = dynamic_ip_and_port.find('interface-address')
+                    if translated_addresses is not None and len(translated_addresses)>0:
+                        source_translation_dict['dynamic_ip_and_port']['translated_address'] = [addr.text for addr in translated_addresses] if translated_addresses else None
+                    if interface_address is not None:
+                        source_translation_dict['dynamic_ip_and_port']['interface_address'] = {"ip":interface_address.find("ip"),'interface':interface_address.find("interface")}
 
             nat_rule = {
                 'name': name,
@@ -1588,7 +1614,7 @@ class XMLParser:
                 'source': [member.text for member in source] if source else [],
                 'destination': [member.text for member in destination] if destination else [],
                 'service': service_value,
-                'nat_type': nat_type.text if nat_type is not None else None,
+                'nat_type': nat_type,
                 'description': description.text if description is not None else None,
                 'disabled': disabled.text == 'yes' if disabled is not None else False,
                 'tag': [member.text for member in tag] if tag else [],

@@ -1,11 +1,9 @@
 CONTROL DIAGRAM:
 
-nodes   = [initial, final, InF, OutN, InN, OutF]
-edges   = [ (initial, not localSrc, InF),
-            (initial, localSrc, OutF),
-            (OutF, true, final),
+nodes   = [initial, final, InF, OutN, InN]
+edges   = [ (initial, true, InF),
             (InF, true, OutN),
             (OutN, true, InN),
-            (InN, true, OutF) ]
+            (InN, true, final)]
 initial = initial
 final   = final
