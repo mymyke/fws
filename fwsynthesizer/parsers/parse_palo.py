@@ -112,7 +112,9 @@ def convert_file(interfaces, rules, nats, routes, addresses, services):
                 proto = service_dict[service].keys()[0]
                 port = service_dict[service][proto]["port"]
                 p_cond.append((proto,port))
-            l_cond.append(' || '.join('(protocol == {} && dstPort == {})'.format(*p) for p in p_cond))
+            # l_cond.append(' || '.join('(protocol == {} && dstPort == {})'.format(*p) for p in p_cond))
+            l_cond.append(' || '.join('(protocol == {} && dstPort == {} && newfield == 12)'.format(*p) for p in p_cond))
+
 
         return l_cond
         

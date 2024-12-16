@@ -39,6 +39,7 @@ data PPacket a = Packet { srcIp    :: !a
                         , dstMac   :: !a
                         , protocol :: !a
                         , state    :: !a
+                        , newfield :: !a
                         } deriving (Show, Eq, Ord, Functor, Foldable, Traversable)
 
 -- | Packet of terms
@@ -57,7 +58,7 @@ packetEq p p' = listEq (toList p) (toList p')
 
 -- | Make a packet with new variables
 mkPacket :: Int -> Packet
-mkPacket n = Packet {srcIp, srcPort, dstIp, dstPort, srcMac, dstMac, protocol, state}
+mkPacket n = Packet {srcIp, srcPort, dstIp, dstPort, srcMac, dstMac, protocol, state ,newfield}
   where srcIp    = Var BV32 $ "srcIp_"    ++ show n
         srcPort  = Var BV16 $ "srcPort_"  ++ show n
         dstIp    = Var BV32 $ "dstIp_"    ++ show n
@@ -66,10 +67,11 @@ mkPacket n = Packet {srcIp, srcPort, dstIp, dstPort, srcMac, dstMac, protocol, s
         dstMac   = Var BV48 $ "dstMAC_"   ++ show n
         protocol = Var BV8  $ "protocol_" ++ show n
         state    = Var BV1  $ "state_"    ++ show n
+        newfield = "newfield_" ++ show n
 
 -- | Create a Packet from a list
 packetFromList :: [a] -> PPacket a
-packetFromList [srcIp, srcPort, dstIp, dstPort, srcMac, dstMac, protocol, state] = Packet{..}
+packetFromList [srcIp, srcPort, dstIp, dstPort, srcMac, dstMac, protocol, state, newfield] = Packet{..}
 packetFromList _ = error "packetFromList: Invalid List"
 
 -- | Zip two packets with a function

@@ -29,6 +29,8 @@ import           FWS.BVPredicates
 import           FWS.Utils
 import           FWS.Types
 
+-- import Debug.Trace (traceM)--print stuff
+
 --------------------------------------------------------------------------------
 -- CHAINS PARSER
 
@@ -72,7 +74,8 @@ parseFormula' str = case parse (formula ppvariable) "" str of
 -- | Chain definitions
 chainDefs :: Parsec String () [NamedChain (Packet -> ParseRuleset)]
 chainDefs = many1 $ do (name, def) <- chainDefinition
-                       ruleset <- chain
+                       --traceM "Parsing chain definition"
+                       ruleset <- chain  
                        return $ NamedChain name def ruleset
 
 -- | Chain header with name and default policy
@@ -136,6 +139,7 @@ pvariable =  srcIp  <$ symbol "srcIp"  <|> srcPort  <$ symbol "srcPort"
          <|> dstIp  <$ symbol "dstIp"  <|> dstPort  <$ symbol "dstPort"
          <|> srcMac <$ symbol "srcMac" <|> dstMac   <$ symbol "dstMac"
          <|> state  <$ symbol "state"  <|> protocol <$ symbol "protocol"
+         <|> newfield <$ symbol "newfield" 
 
 ppvariable :: Parsec String () ((Packet, Packet) -> Term)
 ppvariable =  try ( (srcIp  . snd) <$ symbol "srcIp'" ) <|> try ( (srcPort  . snd) <$ symbol "srcPort'" )
@@ -144,6 +148,7 @@ ppvariable =  try ( (srcIp  . snd) <$ symbol "srcIp'" ) <|> try ( (srcPort  . sn
           <|> try ( (srcIp  . fst) <$ symbol "srcIp"  ) <|> try ( (srcPort  . fst) <$ symbol "srcPort"  )
           <|> try ( (dstIp  . fst) <$ symbol "dstIp"  ) <|> try ( (dstPort  . fst) <$ symbol "dstPort"  )
           <|> try ( (srcMac . fst) <$ symbol "srcMac" ) <|> try ( (dstMac   . fst) <$ symbol "dstMac"   )
+          <|> try ( (newfield  . snd) <$ symbol "newfield" ) <|> try ( (newfield  . fst) <$ symbol "newfield" )
 
 -- | Matches a Formula with &&, || and not
 formula :: Parsec String () (a -> Term) ->  Parsec String () (a -> BVFormula)

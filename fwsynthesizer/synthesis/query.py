@@ -41,7 +41,8 @@ NAMES = {"srcIp": "srcIp", "dstIp": "dstIp",
          "snatPort": "srcPort'", "dnatPort": "dstPort'",
          "srcIp'": "srcIp'", "dstIp'": "dstIp'", # Old style names
          "srcPort'": "srcPort'", "dstPort'": "dstPort'", # old style names
-         "protocol": "protocol", "state": "state"}
+         "protocol": "protocol", "state": "state",
+         "newfield": "newfield"}
 
 ################################################################################
 ## Expression Types

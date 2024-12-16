@@ -13,10 +13,10 @@ header = [ ("srcIp", "Source IP"), ("srcPort", "Source Port"),
            ("dstIp'", "DNAT IP"),("dstPort'", "DNAT Port"),
            ("dstIp", "Destination IP"), ("dstPort", "Destination Port"),
            ("srcMac", "Source MAC"), ("dstMac", "Destination MAC"),
-           ("protocol", "Protocol"), ("state", "State")]
+           ("protocol", "Protocol"), ("state", "State"),("newfield", "newfield")]
 
 filter_projection = ['srcIp', 'srcPort', 'dstIp', 'dstPort', 'srcMac', 'dstMac',
-                     'protocol', 'state']
+                     'protocol', 'state',"newfield"]
 
 protos = {int(proto): name for name, proto in utils.protocols().items()}
 states = {0: 'NEW', 1: 'ESTABLISHED'}
@@ -250,6 +250,7 @@ def rule_to_rowg(rule, hide=[], hide_src=False, hide_dst=False, prefix=[], alias
         show_field( rule.dstMac,   default='*', bottom=bottom_mac, top=top_mac),
         show_field( rule.protocol, default='*', bottom=0, top=2**8-1, names=protos),
         show_field( rule.state,    default='*', bottom=0, top=1, names=states),
+        show_field( rule.newfield,    default='*', bottom=0, top=1),
     ]
     if prefix:
         columns = [prefix] + columns

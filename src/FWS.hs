@@ -105,7 +105,7 @@ dropPredicateOfChain defaccept chain p = loop $ chain p
     loop _                          = error "dropPredicateOfChain: Invalid Chain!"
 
 inNat :: Packet -> Packet -> NatRange -> NatRange -> RewriteDir -> BVFormula
-inNat (Packet si sp di dp sa da p s) (Packet si' sp' di' dp' sa' da' p' s')
+inNat (Packet si sp di dp sa da p s nf) (Packet si' sp' di' dp' sa' da' p' s' nf')
       (dip, dport) (sip, sport) dir = foldl1 And [sim, spm, dim, dpm, sam, dam, pm, sm]
   where dim | dip == Id   || dir == RewriteSrc = Eq di di'
             | otherwise                        = match di dip
@@ -119,6 +119,7 @@ inNat (Packet si sp di dp sa da p s) (Packet si' sp' di' dp' sa' da' p' s')
         dam                                    = Eq da da'
         pm                                     = Eq p p'
         sm                                     = Eq s s'
+        nfm                                    = Eq nf nf'
         match e@(Var s _) (Range (I f@(Lit s' _) t@(Lit s'' _)))
           | s /= s' || s' /= s'' || s /= s'' = error "inNat: Invalid Sort"
           | f /= t                           = And (e `Ge` f) (e `Le` t)
@@ -146,7 +147,7 @@ type ActionPredicate = Chain -> Bool -> Packet -> BVFormula
 getSubsts :: Ruleset -> [(Substitution, ActionPredicate)]
 getSubsts ruleset = filterPacket : (nats ++ checkstates)
   where
-    filterPacket = (packetFromList $ replicate 8 True, withoutNat)
+    filterPacket = (packetFromList $ replicate 9 True, withoutNat)
     nats         = sorted $ mapMaybe (getnat . snd) ruleset
     checkstates  = sorted $ mapMaybe (getcheckstate . snd) ruleset
 
@@ -157,15 +158,16 @@ getSubsts ruleset = filterPacket : (nats ++ checkstates)
           dstMac   = Id
           protocol = Id
           state    = Id
+          newfield = Id
       in Just (fmap (==Id) Packet{..}, withNat $ natType n)
     getnat _ = Nothing
 
     getcheckstate n@(CheckState RewriteBoth) =
-      Just (Packet False False False False True True True True, withCheckstate (==n))
+      Just (Packet False False False False True True True True False, withCheckstate (==n))
     getcheckstate n@(CheckState RewriteDst) =
-      Just (Packet True True False False True True True True, withCheckstate (==n))
+      Just (Packet True True False False True True True True False, withCheckstate (==n))
     getcheckstate n@(CheckState RewriteSrc) =
-      Just (Packet False False True True True True True True, withCheckstate (==n))
+      Just (Packet False False True True True True True True False, withCheckstate (==n))
     getcheckstate _ = Nothing
 
 -- | Check if two nat are of the same type
@@ -213,7 +215,7 @@ firewallPredicates Firewall{..} packet = go initialState [] packet
                 ns <- forM [ edge | edge@(q,_,q') <- controlDiagram, q == st, not $ q' `elem` states ]
                     $ \(_, phi, st') ->  map (And $ phi newp) <$> go st' (st:states) newp
                 return $ concatMap (map (And constpred)) ns
-
+                
 -- | Generic extract function for cubes and multicubes
 extractWith :: (MonadZ3 m, Traversable t1, Ord t)
             => ([Term] -> t2 -> PPacket Term -> t3)
@@ -336,11 +338,39 @@ getPout pin vars = fmap ff pin
   where ff (Var s n) = let basename = takeWhile (not.(=='_')) n in
           Var s $ foldl max n $ filter (isPrefixOf basename) $ map (\(Var _ n) -> n) vars
 
+
 -- | Extract MRules from firewall
 synthesizeFirewall :: Ord t => [Integer] -> LocalFlag -> LocalFlag -> String -> Firewall t -> IO [MRule]
 synthesizeFirewall locals locsrc locdst queryStr fw = evalZ3Model$
   concat <$> extractWith instantiate allBVSat' mkMRule query fw
   where query = mkLocalsQuery queryStr locals locsrc locdst
+
+--
+---- | Extract MRules from firewall
+--synthesizeFirewall :: Ord t => [Integer] -> LocalFlag -> LocalFlag -> String -> Firewall t -> IO [MRule]
+--synthesizeFirewall locals locsrc locdst queryStr fw = do
+--  -- First, extract the MRules
+--  rules <- evalZ3Model $
+--    concat <$> extractWith instantiate allBVSat' mkMRule' query fw
+--
+--  -- Then, print the MRules
+--  mapM_ printMRule rules
+--
+--  return rules  -- Return the list of MRules
+--  where
+--    query = mkLocalsQuery queryStr locals locsrc locdst
+--
+--    -- mkMRule' returns MRule directly (no IO)
+--    mkMRule' pin pout = MRule pin (without pin pout)
+--      where
+--        without p = zipPacketsWith (\i o -> if i == o then Nothing else o) p
+--
+---- Print function for MRule
+--printMRule :: MRule -> IO ()
+--printMRule (MRule pin pout) = do
+--  putStrLn $ "Created MRule with pin: " ++ show pin ++ " and pout: " ++ show pout
+
+
 
 -- | Make a query to constrain source and destination addresses to be (or not to be) a local address
 mkLocalsQuery :: String -> [Integer] -> LocalFlag -> LocalFlag -> ((Packet, Packet) -> BVFormula)
@@ -392,6 +422,8 @@ predicateOfFirewall' fw@(Firewall{..}) (pin,pout) = do
 policyImplication :: (MonadZ3 z3, Ord t) => Firewall t -> Firewall t
                   -> String -> [Integer] ->  LocalFlag -> LocalFlag -> z3 Bool
 policyImplication fw fw' queryStr locals locsrc locdst = do
+  --liftIO $ print locals
+  --liftIO $ print query
   solver          <- mkSolver
   let implication = Not pred `And` pred'
   implies         <- simplify . fst =<< z3Predicate implication Nothing

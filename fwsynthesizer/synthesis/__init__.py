@@ -12,6 +12,7 @@ Any_IP = [[0, 0xffffffff]]
 Any_Port = [[0, 0xffff]]
 Any_Mac = [[0, 0xffffffffffff]]
 Any_protocol = [[0, 255]]
+Any_newfiled = [[0, 255]]
 Any_tag = [[0, 65535]]
 
 LocalFlag  = utils.enum('BOTH', 'LOCAL', 'NOLOCAL')
@@ -113,7 +114,7 @@ class Firewall:
 class Packet(object):
     "Packet Object"
 
-    def __init__(self, srcIp, srcPort, dstIp, dstPort, srcMac, dstMac, protocol, state, mark=[[0, 0]]):
+    def __init__(self, srcIp, srcPort, dstIp, dstPort, srcMac, dstMac, protocol, state, newfield, mark=[[0, 0]]):
         "Make a Packet form list of intervals"
 
         self.srcIp = [ [ipaddr.IPv4Address(ip & 0xffffffff) for ip in ips] for ips in srcIp ]
@@ -125,11 +126,12 @@ class Packet(object):
         self.protocol = protocol
         self.state = state
         self.mark = mark
+        self.newfield = newfield
 
     def __repr__(self):
-        return "#<Packet {}:{} => {}:{} [{}, {}, {}] [{}]>".format(
+        return "#<Packet {}:{} => {}:{} [{}, {}, {}] [{}] [{}]>".format(
             self.srcIp, self.srcPort, self.dstIp, self.dstPort,
-            self.srcMac, self.dstMac, self.protocol, self.state)
+            self.srcMac, self.dstMac, self.protocol, self.state, self.newfield)
 
     def any_srcIp(self):
         return str(self.srcIp[0][0]) == '0.0.0.0' and str(self.srcIp[0][1]) == '255.255.255.255'
@@ -159,7 +161,8 @@ class Packet(object):
             [ [mac._mac for mac in macs] for macs in self.dstMac ],
             self.protocol,
             self.state,
-            self.mark
+            self.mark,
+            self.newfield
         ]
 
 
@@ -184,6 +187,7 @@ class Rule(object):
         self.snatPort = packet_out.srcPort
         self.dnatIp = packet_out.dstIp
         self.dnatPort = packet_out.dstPort
+        self.newfield = packet_in.newfield
 
         self.type = 'NAT' if any((self.snatIp, self.snatPort, self.dnatIp, self.dnatPort)) \
                     else 'FILTER'
@@ -209,6 +213,13 @@ class SynthesisOutput:
             rules = self.__rules
         else:
             rules = [ Synthesis.mrule_list(r) for r in self.__rules ]
+            if(len(rules[0][0]))==8:
+                # newfield not set --> set to empty and ignore.
+                for pin,pout in rules:
+                    #todo currently newfield gets added empty
+                    pin.append([])
+                    pout.append([])
+            # Packet(*rules[0][1])
         return [ Rule(Packet(*pin), Packet(*pout)) for pin,pout in rules ]
 
     def print_table(self, table_style=TableStyle.UNICODE, local_src=LocalFlag.BOTH,
